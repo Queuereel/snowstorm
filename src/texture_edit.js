@@ -335,6 +335,9 @@ window.addEventListener('message', event => {
         if (Texture.source) {
             Texture.save();
         }
+    } else if (message.type == 'reload_texture') {
+        // Host wrote/located a texture on disk; re-fetch it from the host.
+        if (main_config) Texture.reload();
     }
 });
 

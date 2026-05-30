@@ -11,6 +11,7 @@
 		"url": "https://github.com/JannisX11/snowstorm"
 	},
 	"license": "GPL-3.0-or-later",
+	"main": "desktop/main.js",
 	"scripts": {
 		"dev": "npm run development",
 		"development": "mix",
@@ -19,10 +20,37 @@
 		"hot": "mix watch --hot",
 		"production": "mix --production",
 		"extension": "npm run dev",
-		"build-extension": "cd ./vscode_extension && vsce package"
+		"build-extension": "cd ./vscode_extension && vsce package",
+		"build": "node desktop/prep-images.js && npm run production",
+		"desktop": "npm run build && node desktop/launch.js",
+		"desktop-nobuild": "node desktop/launch.js",
+		"dist-win": "npm run build && electron-builder --win"
+	},
+	"build": {
+		"appId": "net.blockbench.snowstorm.desktop",
+		"productName": "Snowstorm",
+		"directories": {
+			"output": "dist_app"
+		},
+		"files": [
+			"index.html",
+			"favicon.ico",
+			"icon.png",
+			"manifest.webmanifest",
+			"dist/**/*",
+			"assets/**/*",
+			"examples/**/*",
+			"desktop/**/*"
+		],
+		"win": {
+			"target": "nsis",
+			"icon": "icon.png"
+		}
 	},
 	"devDependencies": {
 		"cross-env": "^7.0.3",
+		"electron": "^30.5.1",
+		"electron-builder": "^24.13.3",
 		"laravel-mix": "^6.0.49",
 		"sass": "^1.30.0",
 		"sass-loader": "^8.0.2",

@@ -1,5 +1,15 @@
 <template>
 	<ul>
+		<!--Guided preset helper (Spawn / UV sections)-->
+		<li v-if="presetKind" class="preset_bar">
+			<label>{{ presetKind == 'spawn' ? $t('preset.spawn') : $t('preset.uv') }}</label>
+			<select v-model="selectedPreset" @change="onPresetChange">
+				<option value="">{{ $t('preset.custom') }}</option>
+				<option v-for="p in presets" :key="p.id" :value="p.id">{{ p.label }}</option>
+			</select>
+			<div v-if="presetExplain" class="preset_explain">{{ presetExplain }}</div>
+			<div v-if="spawnWarningText" class="preset_warning">⚠ {{ spawnWarningText }}</div>
+		</li>
 		<li
 			class="input_wrapper"
 			v-for="(input, key) in group.inputs"
@@ -144,6 +154,19 @@
 					<texture-input :input.sync="input" :data="data" />
 				</template>
 			</div>
+			<!--Expected texture location (desktop host only)-->
+			<div v-if="input.id == 'particle_texture_path' && texture_path_hint" class="texture_path_hint" :class="{found: texture_path_hint.exists}">
+				<template v-if="texture_path_hint.exists">
+					<span class="texture_path_check">&#10003;</span>{{ texture_path_hint.abs }}
+				</template>
+				<template v-else-if="texture_path_hint.abs">
+					Expecting: {{ texture_path_hint.abs }}
+					<a class="locate_link" @click="locateTexture">Locate texture&hellip;</a>
+				</template>
+				<template v-else>
+					Add a pack folder (File &#9656; Add Pack Folder&hellip;) to resolve this texture.
+				</template>
+			</div>
 			<!--Event Timeline-->
 			<template v-if="input.type == 'event_timeline'">
 				<ul class="event_timeline" :class="{has_entries: input.timeline.length}">
@@ -194,6 +217,8 @@ import "prismjs/themes/prism-okaidia.css";
 import Languages from './../../languages';
 import { guid } from '../../util';
 import registerEdit from '../../edits';
+import vscode from '../../vscode_extension';
+import { SPAWN_PRESETS, UV_PRESETS, applyPreset, spawnWarning } from '../../guided_presets';
 
 
 
@@ -218,7 +243,34 @@ export default {
 		Plus,
 		X,
 	},
+	data() {
+		return {
+			texture_path_hint: null,
+			_hint_request_id: null,
+			_tex_input: null,
+			selectedPreset: '',
+			presetExplain: '',
+		};
+	},
+	computed: {
+		presetKind() {
+			if (this.subject_key == 'emitter' && this.group_key == 'rate') return 'spawn';
+			if (this.subject_key == 'texture' && this.group_key == 'uv') return 'uv';
+			return null;
+		},
+		presets() {
+			return this.presetKind == 'spawn' ? SPAWN_PRESETS : UV_PRESETS;
+		},
+		spawnWarningText() {
+			return this.presetKind == 'spawn' ? spawnWarning() : '';
+		},
+	},
 	methods: {
+		onPresetChange() {
+			let preset = this.presets.find(p => p.id == this.selectedPreset);
+			this.presetExplain = preset ? preset.explain : '';
+			if (preset) applyPreset(preset);
+		},
 		isInputVisible(input, group) {
 			return input.isVisible(group);
 		},
@@ -254,13 +306,69 @@ export default {
 		pickEventOnNameClick(event) {
 			let clicker = event.target.nextElementSibling;
 			clicker.click();
+		},
+		requestTexturePathHint(value) {
+			if (!vscode) return;
+			let request_id = guid();
+			this._hint_request_id = request_id;
+			vscode.postMessage({ type: 'resolve_texture_path', request_id, path: value });
+		},
+		onHostMessage(event) {
+			let message = event.data;
+			if (message && message.type == 'provide_resolved_path' && message.request_id == this._hint_request_id) {
+				this.texture_path_hint = { abs: message.abs, dir: message.dir, exists: message.exists };
+			}
+		},
+		locateTexture() {
+			if (!vscode || !this._tex_input) return;
+			vscode.postMessage({ type: 'locate_texture', path: this._tex_input.value });
 		}
+	},
+	mounted() {
+		// Only the appearance group holds the texture path input. When present (and running under
+		// the desktop host), keep a live hint of the absolute location it resolves to on disk.
+		if (!vscode) return;
+		let tex_input = Object.values(this.group.inputs || {}).find(i => i && i.id == 'particle_texture_path');
+		if (!tex_input) return;
+		this._tex_input = tex_input;
+		window.addEventListener('message', this.onHostMessage);
+		// Reactive: fires on typing and on programmatic load of a particle file.
+		this.$watch(() => tex_input.value, (val) => this.requestTexturePathHint(val), { immediate: true });
+	},
+	beforeDestroy() {
+		window.removeEventListener('message', this.onHostMessage);
 	}
 }
 </script>
 
 <style scoped>
 
+	.preset_bar {
+		margin: 0 4px 8px 4px;
+		padding: 6px 8px;
+		background-color: var(--color-dark);
+		border-radius: 4px;
+	}
+	.preset_bar > label {
+		display: inline-block;
+		width: 90px;
+		color: var(--color-text_grayed);
+	}
+	.preset_bar > select {
+		width: calc(100% - 96px);
+	}
+	.preset_explain {
+		margin-top: 5px;
+		font-size: 11px;
+		line-height: 1.4;
+		color: var(--color-text_grayed);
+	}
+	.preset_warning {
+		margin-top: 5px;
+		font-size: 11px;
+		line-height: 1.4;
+		color: #e0b25b;
+	}
 	.input_wrapper {
 		margin: 2px 0;
 	}
@@ -320,9 +428,35 @@ export default {
 		height: 30px;
 	}
 
+	.texture_path_hint {
+		margin: 3px 0 4px 4px;
+		font-size: 11px;
+		line-height: 1.35;
+		font-family: var(--font-code);
+		color: var(--color-subtle, #c0392b);
+		color: #e0795b;
+		word-break: break-all;
+	}
+	.texture_path_hint.found {
+		color: #7bd88f;
+	}
+	.texture_path_hint .texture_path_check {
+		margin-right: 4px;
+		font-weight: bold;
+	}
+	.texture_path_hint .locate_link {
+		margin-left: 6px;
+		color: var(--color-highlight);
+		cursor: pointer;
+		text-decoration: underline;
+		white-space: nowrap;
+	}
+
 	.input_vector {
 		width: 40px;
 		flex-grow: 1;
+		min-width: 0;
+		overflow: hidden;
 	}
 	.input_vector:first-child {
 		margin-left: 0;

@@ -1,0 +1,64 @@
+{
+	"format_version": "1.10.0",
+	"particle_effect": {
+		"description": {
+			"identifier": "snowstorm:aurora",
+			"basic_render_parameters": {
+				"material": "particles_add",
+				"texture": "textures/particle/particles"
+			}
+		},
+		"components": {
+			"minecraft:emitter_local_space": {
+				"position": false,
+				"rotation": false,
+				"velocity": false
+			},
+			"minecraft:emitter_rate_steady": {
+				"spawn_rate": 6,
+				"max_particles": 48
+			},
+			"minecraft:emitter_lifetime_looping": {
+				"active_time": 10
+			},
+			"minecraft:emitter_shape_box": {
+				"half_dimensions": [9, 0.5, 9],
+				"offset": [0, 2.5, 0]
+			},
+			"minecraft:emitter_lifetime_events": {
+				"creation_event": "ambient_glow"
+			},
+			"minecraft:particle_lifetime_expression": {
+				"max_lifetime": "math.random(5, 8)"
+			},
+			"minecraft:particle_initial_speed": 0,
+			"minecraft:particle_motion_dynamic": {
+				"linear_acceleration": ["math.sin(variable.particle_age + variable.particle_random_1 * 6.28) * 0.05", 0.03, 0],
+				"linear_drag_coefficient": 0.6
+			},
+			"minecraft:particle_appearance_billboard": {
+				"size": [
+					"2.5 + math.sin(variable.particle_age * 30 + variable.particle_random_2 * 6.28) * 0.6",
+					"6 + math.sin(variable.particle_age * 20 + variable.particle_random_1 * 6.28) * 1.5"
+				],
+				"facing_camera_mode": "rotate_y"
+			},
+			"minecraft:particle_appearance_tinting": {
+				"color": [
+					"0.2 + 0.55 * variable.particle_random_1",
+					"1.0 - 0.75 * variable.particle_random_1",
+					"0.55 + 0.45 * variable.particle_random_2",
+					"math.sin((variable.particle_age / variable.particle_lifetime) * 3.14159) * 0.7"
+				]
+			}
+		},
+		"events": {
+			"ambient_glow": {
+				"particle_effect": {
+					"effect": "snowstorm:aurora_glow",
+					"type": "emitter"
+				}
+			}
+		}
+	}
+}

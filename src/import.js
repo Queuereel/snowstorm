@@ -13,9 +13,15 @@ import RainSample from '../examples/rain.particle.json'
 import SnowSample from '../examples/snow.particle.json'
 import TrailSample from '../examples/trail.particle.json'
 import BillboardSample from '../examples/billboard.particle.json'
+import AuroraSample from '../examples/aurora.particle.json'
+import AuroraWinterSample from '../examples/aurora_winter.particle.json'
+import ExplosionSample from '../examples/explosion.particle.json'
+import SmokePlumeSample from '../examples/smoke_plume.particle.json'
+import PortalSwirlSample from '../examples/portal_swirl.particle.json'
 import Curve from './curves'
-import registerEdit from './edits'
+import registerEdit, { setHistoryRestorer, resetHistory } from './edits'
 import { Texture } from './texture_edit'
+import ProjectStore from './project_store'
 
 
 const Samples = {
@@ -27,6 +33,11 @@ const Samples = {
 	snow: SnowSample,
 	trail: TrailSample,
 	billboard: BillboardSample,
+	aurora: AuroraSample,
+	aurora_winter: AuroraWinterSample,
+	explosion: ExplosionSample,
+	smoke_plume: SmokePlumeSample,
+	portal_swirl: PortalSwirlSample,
 }
 
 function updateInputsFromConfig() {
@@ -75,6 +86,11 @@ function updateInputsFromConfig() {
 }
 //function importFile() {}
 function updateConfig(data) {
+	// Reset first: Wintersky's setFromJSON *merges* events/curves/event-triggers onto the existing
+	// config instead of replacing them, so without this, switching particles would carry over the
+	// previous particle's events and curves. (loadFile resets via startNewProject; the project-panel
+	// switch path calls updateConfig directly, so it must reset here.)
+	Config.reset();
 	Config.unsupported_fields = {};
 	Config.setFromJSON(data);
 
@@ -89,11 +105,17 @@ function updateConfig(data) {
 
 	updateInputsFromConfig();
 }
+// Let the undo/redo system restore a serialized particle without resetting the texture or playback.
+setHistoryRestorer(updateConfig);
+// Let the project store load a particle into the editor when switching between project entries.
+ProjectStore.setLoader(updateConfig);
+
 function loadFile(data, confirmNewProject=true) {
 	if (data && data.particle_effect && (!confirmNewProject || startNewProject())) {
 		Texture.reset();
 		QuickSetup.resetAll();
 		updateConfig(data);
+		resetHistory();
 		Emitter.stop(true);
 		View.PlaybackController.start();
 		registerEdit('load file')
@@ -136,6 +158,7 @@ function startNewProject(force) {
 document.addEventListener('readystatechange', () => {
 	Emitter.start();
 	View.PlaybackController.start();
+	resetHistory();
 });
 
 function loadPreset(id) {
@@ -155,6 +178,7 @@ if (vscode) {
 
 			let parsed = JSON.parse(text)
 			updateConfig(parsed, true)
+			resetHistory()
 			if (ExpandedInput.input) {
 				ExpandedInput.input.focus()
 			}

@@ -1,8 +1,10 @@
 <template>
-	<div id="app" :class="{portrait_view}" :style="{'--sidebar': getEffectiveSidebarWidth()+'px'}">
+	<div id="app" :class="{portrait_view}" :style="{'--sidebar': getEffectiveSidebarWidth()+'px', '--projectpanel': getEffectiveProjectWidth()+'px'}">
 
 		<div id="dialog_blackout" v-if="dialog" @click="closeDialog"></div>
 		<warning-dialog v-if="dialog == 'warnings'" @close="closeDialog"></warning-dialog>
+
+		<project-panel v-if="!portrait_view" />
 
         <header>
 			<logo v-if="portrait_view" />
@@ -26,7 +28,7 @@
 
 
 		<div class="resizer"
-			:style="{ left: getEffectiveSidebarWidth() +'px', cursor: is_sidebar_open ? 'ew-resize' : 'default'}"
+			:style="{ left: (getEffectiveProjectWidth() + getEffectiveSidebarWidth()) +'px', cursor: is_sidebar_open ? 'ew-resize' : 'default'}"
 			ref="sidebar_resizer" @mousedown="is_sidebar_open && resizeSidebarStart($event)">
 			<button class="resizer_toggle_button" v-show="!is_sidebar_open" @click="toggleSidebar" @mousedown.stop="">
 				<PanelLeftOpen/>
@@ -52,10 +54,12 @@ import Sidebar from './Sidebar';
 import HelpPanel from './HelpPanel';
 import Preview from './Preview';
 import CodeViewer from './CodeViewer';
+import ProjectPanel from './ProjectPanel';
 import WarningDialog from './WarningDialog'
 import ExpressionBar from './ExpressionBar'
 import InfoBox from './InfoBox'
 import vscode from '../vscode_extension';
+import ProjectStore from '../project_store';
 import {SlidersHorizontal, FileJson, Move3D, HelpCircle} from 'lucide-vue'
 import Logo from './Sidebar/Logo.vue';
 import {PanelLeftOpen} from "lucide-vue";
@@ -98,7 +102,7 @@ function getInitialIsSidebarOpen() {
 export default {
 	name: 'app',
 	components: {
-		Preview, CodeViewer, MenuBar, Sidebar, HelpPanel, WarningDialog, ExpressionBar, InfoBox,
+		Preview, CodeViewer, MenuBar, Sidebar, HelpPanel, ProjectPanel, WarningDialog, ExpressionBar, InfoBox,
 		SlidersHorizontal, FileJson, Move3D, Logo, PanelLeftOpen, HelpCircle
 	},
 	data() {return {
@@ -109,6 +113,8 @@ export default {
 		sidebar_width: getInitialSidebarWidth(),
 		is_sidebar_open: getInitialIsSidebarOpen(),
 		is_help_panel_open: false,
+		project_panel_width: 240,
+		is_project_open: true,
 		portrait_view,
 	}},
 	methods: {
@@ -162,6 +168,9 @@ export default {
 		getEffectiveSidebarWidth() {
 			return this.is_sidebar_open * this.sidebar_width;
 		},
+		getEffectiveProjectWidth() {
+			return (!this.portrait_view && this.is_project_open) ? this.project_panel_width : 0;
+		},
 		toggleSidebar() {
 			this.is_sidebar_open = !this.is_sidebar_open;
 			Vue.nextTick(() => {
@@ -170,6 +179,19 @@ export default {
 			});
 			localStorage.setItem('snowstorm_is_sidebar_open', this.is_sidebar_open);
 		}
+	},
+	mounted() {
+		// Ctrl+S flushes the project (per-file overwrite prompts in folder mode, bundle in .snow mode).
+		this._onKeydown = (event) => {
+			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+				event.preventDefault();
+				ProjectStore.save();
+			}
+		};
+		window.addEventListener('keydown', this._onKeydown);
+	},
+	beforeDestroy() {
+		window.removeEventListener('keydown', this._onKeydown);
 	}
 }
 </script>
@@ -230,8 +252,8 @@ export default {
 	div#app {
 		display: grid;
 		grid-template-rows: 74px calc(100% - 74px);
-		grid-template-columns: var(--sidebar) calc(100% - var(--sidebar));
-		grid-template-areas: "sidebar header" "sidebar preview";
+		grid-template-columns: var(--projectpanel) var(--sidebar) calc(100% - var(--projectpanel) - var(--sidebar));
+		grid-template-areas: "project sidebar header" "project sidebar preview";
 		height: 100%;
 		width: 100%;
 		position: fixed;

@@ -1,0 +1,26 @@
+SNOWSTORM DESKTOP - QUICK START
+================================
+
+Just double-click one of these:
+
+  Snowstorm-Start.bat        <- USE THIS. Sets up (first time), builds, and opens the app.
+  Snowstorm-Run.bat             Opens the app fast, without rebuilding (after the first build).
+  Snowstorm-MakeInstaller.bat   Builds a real Windows installer .exe (in the dist_app folder).
+
+That's it. The first run takes a few minutes (it downloads what it needs);
+after that it's quick.
+
+Inside the app
+--------------
+- File menu  -> New Particle, Open Particle, "Add Pack Folder..." to wire in a pack.
+- Packs menu -> lists every particle found in your wired pack folders; click to open.
+- Edits auto-save back to the same file. Painting a texture + Save writes it straight
+  into the pack's textures folder (it overwrites - no duplicate copies).
+- Under the texture path field you'll see the exact location on disk where the texture
+  is expected, with a "Locate texture..." button if it's missing.
+- Bottom toolbar of the 3D view has two new toggles:
+    * the path icon  -> shows where particles travel over their whole lifetime
+    * the spin icon  -> shows particle rotation along that path
+  No need to wait for the emitter cycle to finish.
+
+If a .bat shows an error, take a screenshot of the window - it pauses so you can read it.

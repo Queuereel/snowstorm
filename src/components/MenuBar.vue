@@ -1,21 +1,21 @@
 <template>
     <ul id="menu_bar">
         <li v-for="menu in Menu" :key="menu.id" onclick="">
-            <a>{{ menu.label }}</a>
+            <a>{{ menu.tkey ? $t(menu.tkey) : menu.label }}</a>
             <ul class="menu_dropdown">
                 <li v-for="entry in menu.children" :key="entry.id" v-on:click="entry.click(getVM(), $event)">
-                    <a>{{ entry.label }}</a>
+                    <a>{{ entry.tkey ? $t(entry.tkey) : entry.label }}</a>
                 </li>
             </ul>
         </li>
-		
+
 		<template v-if="isVSCExtension">
-        	<li class="mode_selector" @click="openCodeViewer(true)" title="Open Code View to Side"><i class="unicode_icon split">{{'\u2385'}}</i></li>
-        	<li class="mode_selector" @click="openCodeViewer(false)" title="Open as Code View">Switch to Code</li>
+        	<li class="mode_selector" @click="openCodeViewer(true)" :title="$t('menu.code_to_side')"><i class="unicode_icon split">{{'\u2385'}}</i></li>
+        	<li class="mode_selector" @click="openCodeViewer(false)" :title="$t('menu.switch_code')">{{ $t('menu.switch_code') }}</li>
 		</template>
 		<template v-else-if="!portrait_view">
-        	<li class="mode_selector code" :class="{selected: selected_tab == 'code'}" @click="$emit('changetab', 'code')">Code</li>
-        	<li class="mode_selector preview" :class="{selected: selected_tab == 'preview'}" @click="$emit('changetab', 'preview')">Preview</li>
+        	<li class="mode_selector code" :class="{selected: selected_tab == 'code'}" @click="$emit('changetab', 'code')">{{ $t('tab.code') }}</li>
+        	<li class="mode_selector preview" :class="{selected: selected_tab == 'preview'}" @click="$emit('changetab', 'preview')">{{ $t('tab.preview') }}</li>
 		</template>
 
 		<div v-if="!portrait_view" @click="openHelpPanel()" class="mode_selector highlighting_button" :class="{selected: is_help_panel_open}" title="Documentation">
@@ -38,6 +38,7 @@ import { shareParticle } from '../share'
 import { generateFile } from '../export'
 import { Texture } from '../texture_edit'
 import { Options, OptionValues, setOption } from '../options'
+import { LANGUAGES, setLanguage } from '../i18n'
 const isVSCExtension = !!vscode;
 
 function openLink(link) {
@@ -53,14 +54,19 @@ function openLink(link) {
 
 const Menu = [
 	{
-		label: 'File',
+		label: 'File', tkey: 'menu.file',
 		children: [
 			{label: 'New File', click: () => {startNewProject()}},
 		]
 	},
 	{
-		label: 'Examples',
+		label: 'Examples', tkey: 'menu.examples',
 		children: [
+			{label: 'Aurora', 		click: () => {loadPreset('aurora')}},
+			{label: 'Aurora (Winter)', click: () => {loadPreset('aurora_winter')}},
+			{label: 'Explosion', 	click: () => {loadPreset('explosion')}},
+			{label: 'Smoke Plume', 	click: () => {loadPreset('smoke_plume')}},
+			{label: 'Portal Swirl', click: () => {loadPreset('portal_swirl')}},
 			{label: 'Loading', 	click: () => {loadPreset('loading')}},
 			{label: 'Rainbow', 	click: () => {loadPreset('rainbow')}},
 			{label: 'Rain', 	click: () => {loadPreset('rain')}},
@@ -72,7 +78,7 @@ const Menu = [
 		]
 	},
 	{
-		label: 'View',
+		label: 'View', tkey: 'menu.view',
 		children: [
 			{label: 'Grid', click: () => {
 				View.grid.visible = !View.grid.visible;
@@ -90,7 +96,7 @@ const Menu = [
 		]
 	},
 	{
-		label: 'Help',
+		label: 'Help', tkey: 'menu.help',
 		children: [
 			{label: 'Open Documentation', click: (vm) => { vm.openHelpPanel('', '') }},
 			{label: 'Molang Reference', click: (vm) => { vm.openHelpPanel('general', 'molang') }},
@@ -106,10 +112,19 @@ const Menu = [
 
 if (!isVSCExtension) {
 	Menu[0].children.push(
-		{label: 'Import', click: () => {importFile()}},
-		{label: 'Download', click: () => {downloadFile()}}
+		{label: 'Import', tkey: 'menu.import', click: () => {importFile()}},
+		{label: 'Download', tkey: 'menu.download', click: () => {downloadFile()}}
 	)
 }
+
+// Language menu (File · Examples · View · Help · Language).
+Menu.push({
+	label: 'Language', tkey: 'menu.language',
+	children: LANGUAGES.map(lang => ({
+		label: lang.label,
+		click: () => { setLanguage(lang.id); },
+	})),
+});
 
 
 

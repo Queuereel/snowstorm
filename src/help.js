@@ -610,6 +610,59 @@ export default {
 	events: {
 		title: 'Events',
 		pages: {
+			using_in_minecraft: {
+				title: 'Using Events in Minecraft',
+				text: [
+					'Events are small actions your particle can fire at specific moments — like when the emitter starts, when a particle dies, or at a set time. This page explains, in plain language, what they do and how to make them work inside Minecraft.',
+
+					{type: 'h2', text: 'The whole idea in one line'},
+					'Something happens (a trigger) → it fires an event → the event does an action (spawn another particle, play a sound, or run a Molang expression).',
+
+					{type: 'h2', text: 'Step 1 — Decide what the event does'},
+					'On the "Events" page you create named events. Each event runs one or more "subparts" (actions):',
+					{type: 'h3', text: 'Particle'},
+					'Spawns another particle effect at the spot where the event fired. This is how you chain effects — for example a firework that bursts into sparks.',
+					{type: 'h3', text: 'Sound'},
+					'Plays a sound at that spot. Only built-in (vanilla) sound names work, due to a Minecraft bug.',
+					{type: 'h3', text: 'Expression'},
+					'Runs a Molang expression on the emitter, usually to change a variable (for example, count something or flip a value).',
+					{type: 'h3', text: 'Sequence'},
+					'Runs several actions one after another.',
+					{type: 'h3', text: 'Randomize'},
+					'Picks one action at random. Higher "Weight" = more likely. Leave one option empty so that "sometimes nothing happens".',
+
+					{type: 'h2', text: 'Step 2 — Decide when it fires'},
+					'Events do nothing until something triggers them. You hook them up on the "Emitter Event Triggers" and "Particle Event Triggers" pages:',
+					{type: 'h3', text: 'Emitter triggers'},
+					'Creation (when the emitter starts), Expiration (when it ends), Timeline (at set times during its life), and Travel Distance (every few blocks the emitter moves).',
+					{type: 'h3', text: 'Particle triggers'},
+					'Creation (when each particle is born), Expiration (when each particle dies — great for "explode into smaller particles"), and Timeline (at a set age of the particle).',
+					{type: 'h3', text: 'Collision triggers'},
+					'On the Motion → Collision page, a particle can fire an event when it hits a block.',
+
+					{type: 'h2', text: 'Step 3 — Put the files in a resource pack'},
+					'For events to work in-game, every file has to live in a resource pack:',
+					{type: 'html', content: 'Save the particle here: <code>your_pack/particles/your_name.particle.json</code> (in the desktop app, wire your pack folder once and Save puts it in the right place automatically).'},
+					'Any particle your events spawn must ALSO exist in that particles folder, and you point to it by its identifier (the "namespace:name" at the top of the File page, e.g. mypack:spark).',
+					{type: 'html', content: 'The texture path (for example <code>textures/particle/spark</code>) must point to a real image inside the same pack.'},
+
+					{type: 'h2', text: 'Step 4 — Trigger the particle in-game'},
+					'Once the pack is loaded, you start the effect in one of these common ways:',
+					{type: 'h4', text: 'With a command'},
+					{type: 'html', content: 'Run it at a position: <code>/particle mypack:your_name ~ ~ ~</code>'},
+					{type: 'h4', text: 'From an entity'},
+					'Attach the effect to an entity using a particle_effect in its client entity / animation files, so it plays as the entity moves or animates.',
+					{type: 'h4', text: 'From another effect (manual emit)'},
+					'The "Particle" event type spawns a child effect. If you use the "Particle" or "Particle with Velocity" type, set that child effect\'s Spawn Amount mode to "Manual" so the parent controls when its particles appear.',
+
+					{type: 'h2', text: 'Previewing inside Snowstorm'},
+					'You can watch events fire right here before shipping. Child particles spawned by events only show up if Snowstorm can find them — in the desktop app that means the spawned effect lives in a wired pack folder. If a spawned particle is missing, the event still fires, you just won\'t see that child effect.',
+
+					{type: 'h2', text: 'Learn more'},
+					{type: 'link', text: 'Introduction to Particles (Microsoft Docs)', href: 'https://learn.microsoft.com/en-us/minecraft/creator/reference/content/particlesreference/particlesintroduction'},
+					{type: 'link', text: 'Particle Component List (Microsoft Docs)', href: 'https://learn.microsoft.com/en-us/minecraft/creator/reference/content/particlesreference/particlecomponentlist'},
+				]
+			},
 			events: {
 				title: 'Events',
 				text: [

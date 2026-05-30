@@ -31,24 +31,44 @@
                 <option value="entity">Entity</option>
                 <option value="locator">Locator</option>
             </select>
-            <div class="tool ground_collision" :class="{toggle_enabled: collision}" @click="toggleCollision()" title="Preview Collisions">
+            <select id="time_of_day" v-model="time_of_day" @change="setTimeOfDay()" :title="$t('preview.time')">
+                <option value="default">{{ $t('time.default') }}</option>
+                <option value="day">{{ $t('time.day') }}</option>
+                <option value="sunset">{{ $t('time.sunset') }}</option>
+                <option value="night">{{ $t('time.night') }}</option>
+                <option value="cave">{{ $t('time.cave') }}</option>
+            </select>
+            <div class="tool ground_collision" :class="{toggle_enabled: collision}" @click="toggleCollision()" :title="$t('preview.collisions')">
                 <FlipVertical2 :size="20" v-if="collision" />
                 <Minus :size="20" v-else />
             </div>
-            <div class="tool" :class="{toggle_enabled: show_placeholder_bar}" @click="show_placeholder_bar ? hidePlaceholderBar() : showPlaceholderBar()" title="Show Variable Placeholder Bar">
+            <div class="tool" :class="{toggle_enabled: show_placeholder_bar}" @click="show_placeholder_bar ? hidePlaceholderBar() : showPlaceholderBar()" :title="$t('preview.variables')">
                 <Hash :size="22" />
+            </div>
+            <div class="tool" :class="{toggle_enabled: show_path}" @click="toggleTrajectoryPath()" :title="$t('preview.path')">
+                <Spline :size="20" />
+            </div>
+            <div class="tool" :class="{toggle_enabled: show_rotation}" @click="toggleTrajectoryRotation()" :title="$t('preview.rotation')">
+                <RotateCw :size="20" />
+            </div>
+            <div class="tool" :class="{toggle_enabled: show_shape}" @click="toggleShapeGizmo()" :title="$t('preview.shape')">
+                <Box :size="20" />
             </div>
 
             <div class="spacing" />
 
-            <div class="tool" @click="startAnimation()" title="Play">
+            <div class="tool" @click="startAnimation()" :title="$t('preview.play')">
                 <Play :size="22" />
             </div>
-            <div class="tool" @click="togglePause()" title="Pause">
+            <div class="tool" @click="togglePause()" :title="$t('preview.pause')">
                 <Pause :size="22" />
             </div>
 
-            <div class="spacing" />
+            <!--Scrubbable timeline-->
+            <div class="timeline_track" ref="timeline" @mousedown="scrubStart" title="Drag to scrub through the effect">
+                <div class="timeline_fill" :style="{width: playhead + '%'}"></div>
+                <div class="timeline_head" :style="{left: playhead + '%'}"></div>
+            </div>
 
             <div class="tool warning" @click="$emit('opendialog', 'warnings')" v-if="warning_count" :title="getWarningTitle()"><i class="unicode_icon warn">⚠</i>{{ warning_count }}</div>
             <div class="stat">{{particle_counter}} P</div>
@@ -71,6 +91,8 @@
     import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
     import {Emitter, Scene, initParticles} from './../emitter';
+    import {Trajectory} from './../trajectory';
+    import {ShapeGizmo} from './../shape_gizmo';
     import {validate} from './WarningDialog'
 
     import {OptionValues} from './../options'
@@ -84,15 +106,25 @@
         Pause,
         Hash,
         X,
-        CheckCheck
+        CheckCheck,
+        Spline,
+        RotateCw,
+        Box
     } from 'lucide-vue'
 
     import {EditListeners} from '../edits'
 
     import {updateVariablePlaceholderList, bakePlaceholderVariable} from './../variable_placeholders'
 
-    let BACKGROUND_COLOR = 0x29323a;
- 
+    // Time-of-day environment presets for the preview background.
+    const TIME_PRESETS = {
+        day:    0x7fa8d0,
+        sunset: 0x6e4a52,
+        night:  0x141c28,
+        cave:   0x0b0d10,
+    };
+    let BACKGROUND_COLOR = TIME_PRESETS[localStorage.getItem('snowstorm_time_of_day')] || 0x29323a;
+
     const View = {
         updateVariablePlaceholderList() {},
         PlaybackController: {
@@ -312,6 +344,11 @@
             placeholder_keys: [],
             placeholder_values: {},
             show_placeholder_bar: localStorage.getItem('snowstorm_show_placeholder_bar') == 'true',
+            show_path: false,
+            show_rotation: false,
+            show_shape: false,
+            time_of_day: localStorage.getItem('snowstorm_time_of_day') || 'default',
+            playhead: 0,
             bake_placeholder_key: null
         }},
         components: {
@@ -322,6 +359,9 @@
             Hash,
             X,
             CheckCheck,
+            Spline,
+            RotateCw,
+            Box,
         },
         methods: {
             updateSize() {
@@ -365,6 +405,49 @@
                 Emitter.ground_collision = !Emitter.ground_collision;
                 this.collision = Emitter.ground_collision;
             },
+            toggleTrajectoryPath() {
+                this.show_path = !this.show_path;
+                Trajectory.setShowPath(this.show_path);
+            },
+            toggleTrajectoryRotation() {
+                this.show_rotation = !this.show_rotation;
+                Trajectory.setShowRotation(this.show_rotation);
+            },
+            toggleShapeGizmo() {
+                this.show_shape = !this.show_shape;
+                ShapeGizmo.setShow(this.show_shape);
+            },
+            setTimeOfDay() {
+                let color = TIME_PRESETS[this.time_of_day];
+                if (color === undefined) {
+                    BACKGROUND_COLOR = 0x29323a;
+                    localStorage.removeItem('snowstorm_time_of_day');
+                } else {
+                    BACKGROUND_COLOR = color;
+                    localStorage.setItem('snowstorm_time_of_day', this.time_of_day);
+                }
+                if (View.renderer) View.renderer.setClearColor(new THREE.Color(BACKGROUND_COLOR));
+            },
+            scrubStart(event) {
+                this.scrubTo(event);
+                let move = (e) => this.scrubTo(e);
+                let up = () => {
+                    document.removeEventListener('mousemove', move);
+                    document.removeEventListener('mouseup', up);
+                };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', up);
+            },
+            scrubTo(event) {
+                let track = this.$refs.timeline;
+                if (!track || typeof Emitter.jumpTo !== 'function') return;
+                let rect = track.getBoundingClientRect();
+                let fraction = Math.clamp((event.clientX - rect.left) / rect.width, 0, 1);
+                let span = Emitter.active_time || Emitter.config.emitter_lifetime_active_time || 1;
+                Emitter.paused = true;
+                Emitter.jumpTo(fraction * span);
+                this.playhead = fraction * 100;
+            },
             getWarningTitle() {
                 return this.warning_count == 1
                     ? '1 Warning'
@@ -407,6 +490,21 @@
                     updateVariablePlaceholderList(this.placeholder_keys);
                 }
             };
+            Trajectory.setEmitter(Emitter);
+            EditListeners['trajectory'] = () => {
+                if (Trajectory.active) Trajectory.update();
+            };
+            ShapeGizmo.setEmitter(Emitter);
+            EditListeners['shape_gizmo'] = () => {
+                if (ShapeGizmo.active) ShapeGizmo.update();
+            };
+            // Keep the timeline playhead in sync with playback.
+            setInterval(() => {
+                let span = Emitter.active_time || (Emitter.config && Emitter.config.emitter_lifetime_active_time) || 1;
+                if (!Emitter.paused && span) {
+                    this.playhead = Math.clamp(((Emitter.view_age || 0) % span) / span * 100, 0, 100);
+                }
+            }, 100);
             View.updateVariablePlaceholderList = () => {
                 updateVariablePlaceholderList(this.placeholder_keys);
             }
@@ -542,5 +640,35 @@
     .tool.toggle_enabled {
         background-color: var(--color-background);
     }
-    
+    .timeline_track {
+        flex: 1 1 auto;
+        align-self: center;
+        height: 6px;
+        margin: 0 10px;
+        min-width: 60px;
+        background-color: var(--color-dark);
+        border-radius: 3px;
+        position: relative;
+        cursor: pointer;
+        padding: 0;
+    }
+    .timeline_fill {
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        background-color: var(--color-accent, #4fd6ff);
+        border-radius: 3px;
+        pointer-events: none;
+    }
+    .timeline_head {
+        position: absolute;
+        top: 50%;
+        width: 11px;
+        height: 11px;
+        margin-left: -5px;
+        transform: translateY(-50%);
+        background-color: var(--color-light, #fff);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
 </style>
