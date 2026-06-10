@@ -5,7 +5,7 @@
 			"identifier": "snowstorm:aurora",
 			"basic_render_parameters": {
 				"material": "particles_add",
-				"texture": "textures/particle/particles"
+				"texture": "textures/particle/aurora"
 			}
 		},
 		"components": {

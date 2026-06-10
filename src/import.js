@@ -22,6 +22,7 @@ import Curve from './curves'
 import registerEdit, { setHistoryRestorer, resetHistory } from './edits'
 import { Texture } from './texture_edit'
 import ProjectStore from './project_store'
+import { bumpRefresh } from './ui_refresh'
 
 
 const Samples = {
@@ -83,13 +84,17 @@ function updateInputsFromConfig() {
 	Data.effect.meta.inputs.identifier.onchange();
 
 	View.updateVariablePlaceholderList();
+	// Remount molang editors so they show the freshly loaded values (undo/redo/switch/load).
+	bumpRefresh();
 }
+// Let other modules (e.g. the 3D path editor) refresh every tab after writing to Config directly.
+if (typeof window !== 'undefined') window.refreshInputsFromConfig = updateInputsFromConfig;
 //function importFile() {}
 function updateConfig(data) {
-	// Reset first: Wintersky's setFromJSON *merges* events/curves/event-triggers onto the existing
-	// config instead of replacing them, so without this, switching particles would carry over the
-	// previous particle's events and curves. (loadFile resets via startNewProject; the project-panel
-	// switch path calls updateConfig directly, so it must reset here.)
+	// Reset to a clean slate so the previous particle's values (events, curves, rotation, etc.)
+	// don't bleed through — Wintersky's setFromJSON only overwrites fields present in the new
+	// data, so anything absent would otherwise persist from the last particle. (loadFile resets
+	// via startNewProject; the project-panel switch path calls updateConfig directly.)
 	Config.reset();
 	Config.unsupported_fields = {};
 	Config.setFromJSON(data);

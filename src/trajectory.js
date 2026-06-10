@@ -23,6 +23,9 @@ const MAX_POINTS = 400;          // cap on stored points per path; long paths ar
                                  // 140s particle traces fully without a huge geometry
 const ROTATION_TICK_EVERY = 4;   // draw a rotation tick every N samples
 const ROTATION_TICK_LENGTH = 0.18;
+const TEXTURE_EVERY = 6;         // stamp a textured sprite every N samples along the path
+const TEXTURE_TINT = 0xbfe6ff;   // light tint so the texture preview reads as a ghost, not a live particle
+const TEXTURE_OPACITY = 0.6;
 
 function removeFromArray(array, item) {
 	let index = array.indexOf(item);
@@ -45,6 +48,7 @@ class TrajectoryGizmo {
 		this.emitter = null;
 		this.show_path = false;
 		this.show_rotation = false;
+		this.show_texture = false;
 		this.sample_count = 12;
 	}
 	setEmitter(emitter) {
@@ -58,8 +62,12 @@ class TrajectoryGizmo {
 		this.show_rotation = value;
 		this.update();
 	}
+	setShowTexture(value) {
+		this.show_texture = value;
+		this.update();
+	}
 	get active() {
-		return this.show_path || this.show_rotation;
+		return this.show_path || this.show_rotation || this.show_texture;
 	}
 	clear() {
 		for (let child of this.group.children.slice()) {
@@ -81,6 +89,7 @@ class TrajectoryGizmo {
 		let emitter = this.emitter;
 		let tick_rate = emitter.scene.global_options.tick_rate;
 		let points = [], rotations = [], facings = [];
+		let size = [0.5, 0.5];
 
 		// Neutralize events so the probe never spawns child effects / sounds / sub-emitters.
 		let originalRunEvent = emitter.runEvent;
@@ -92,6 +101,12 @@ class TrajectoryGizmo {
 			// Detach immediately so it is never rendered or counted as a live particle.
 			removeFromArray(emitter.particles, probe);
 			if (probe.mesh.parent) probe.mesh.parent.remove(probe.mesh);
+
+			// Representative billboard size for the texture preview.
+			if (probe.size) {
+				if (probe.size.isVector2) size = [probe.size.x, probe.size.y];
+				else if (Array.isArray(probe.size)) size = [probe.size[0], probe.size[1]];
+			}
 
 			let lifetime = probe.lifetime || 1;
 			// Simulate every tick for physics accuracy, but only store a point every `stride` ticks
@@ -127,7 +142,7 @@ class TrajectoryGizmo {
 				probe.delete();
 			}
 		}
-		return { points, rotations, facings };
+		return { points, rotations, facings, size };
 	}
 	update() {
 		this.clear();
@@ -138,15 +153,35 @@ class TrajectoryGizmo {
 		this.reparent();
 
 		let path_positions = [];
+		// Shared sprite material for the texture preview (the live particle texture, lightly tinted).
+		let texMaterial = null;
+		if (this.show_texture) {
+			let texture = this.emitter.config && this.emitter.config.texture;
+			if (texture) {
+				texMaterial = new THREE.SpriteMaterial({
+					map: texture, color: TEXTURE_TINT, transparent: true,
+					opacity: TEXTURE_OPACITY, depthWrite: false,
+				});
+			}
+		}
 
 		for (let s = 0; s < this.sample_count; s++) {
-			let { points, rotations, facings } = this.simulateOne();
+			let { points, rotations, facings, size } = this.simulateOne();
 			if (points.length < 2) continue;
 
 			if (this.show_path) {
 				let geometry = new THREE.BufferGeometry().setFromPoints(points);
 				let material = new THREE.LineBasicMaterial({ color: PATH_COLOR, transparent: true, opacity: 0.6 });
 				this.group.add(new THREE.Line(geometry, material));
+			}
+
+			if (texMaterial) {
+				for (let i = 0; i < points.length; i += TEXTURE_EVERY) {
+					let sprite = new THREE.Sprite(texMaterial);
+					sprite.position.copy(points[i]);
+					sprite.scale.set(size[0] || 0.5, size[1] || 0.5, 1);
+					this.group.add(sprite);
+				}
 			}
 
 			if (this.show_rotation) {

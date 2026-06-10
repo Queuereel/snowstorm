@@ -21,6 +21,7 @@
 				class="project_item"
 				:class="{active: p.id === state.activeId, checked: p.selected}"
 				@click="store.setActive(p.id)"
+				@contextmenu.prevent="showContext(p, $event)"
 				:title="p.path || p.id"
 			>
 				<input type="checkbox" class="project_check" :checked="p.selected" @click.stop="store.toggleSelected(p.id)" title="Select for batch save">
@@ -30,6 +31,11 @@
 				</span>
 			</li>
 		</ul>
+
+		<div v-if="ctxMenu" class="ctx_menu" :style="{top: ctxMenu.y+'px', left: ctxMenu.x+'px'}">
+			<div class="ctx_item" @click="ctxSave()">Save</div>
+			<div class="ctx_item ctx_cancel" @click="ctxMenu=null">Cancel</div>
+		</div>
 	</div>
 </template>
 
@@ -41,7 +47,7 @@ export default {
 	name: 'project-panel',
 	components: { FolderOpen, Package, FilePlus, Save, Search },
 	data() {
-		return { store: ProjectStore, state: ProjectStore.state };
+		return { store: ProjectStore, state: ProjectStore.state, ctxMenu: null };
 	},
 	computed: {
 		particles() {
@@ -57,7 +63,23 @@ export default {
 			return base + (this.dirtyCount ? ' (' + this.dirtyCount + ')' : '');
 		},
 	},
+	mounted() {
+		this._dismissCtx = () => { this.ctxMenu = null; };
+		window.addEventListener('click', this._dismissCtx);
+	},
+	beforeDestroy() {
+		window.removeEventListener('click', this._dismissCtx);
+	},
 	methods: {
+		showContext(p, event) {
+			// Position the menu inside the panel (fixed coords).
+			this.ctxMenu = { particle: p, y: event.clientY, x: event.clientX };
+		},
+		ctxSave() {
+			if (!this.ctxMenu) return;
+			this.store.saveOne(this.ctxMenu.particle.id);
+			this.ctxMenu = null;
+		},
 		shortId(id) {
 			return id && id.includes(':') ? id.split(':').slice(1).join(':') : id;
 		},
@@ -177,5 +199,28 @@ export default {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	.ctx_menu {
+		position: fixed;
+		z-index: 200;
+		background-color: var(--color-bar);
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+		min-width: 130px;
+		padding: 3px 0;
+	}
+	.ctx_item {
+		padding: 7px 14px;
+		cursor: pointer;
+		font-size: 0.95em;
+	}
+	.ctx_item:hover {
+		background-color: var(--color-background);
+		color: var(--color-highlight);
+	}
+	.ctx_cancel {
+		color: var(--color-text_grayed);
+		border-top: 1px solid var(--color-border);
 	}
 </style>

@@ -39,7 +39,7 @@
 					</ul>
 					<event-list v-else-if="group.type == 'events'" :group.sync="group" />
 					<ul v-else>
-						<input-group :group.sync="group" :group_key.sync="group_key" :subject_key.sync="selected_subject_key" :data="data"></input-group>
+						<input-group :key="group_key + '-' + uiTick" :group.sync="group" :group_key.sync="group_key" :subject_key.sync="selected_subject_key" :data="data"></input-group>
 					</ul>
 				</template>
 				<div v-else class="input_group_folded_indicator" @click="fold(group)">...</div>
@@ -68,6 +68,7 @@ import QuickSetup from './Sidebar/QuickSetup.vue';
 import {Curve, updateCurvesPanel} from './../curves'
 
 import Data from './../input_structure'
+import { UiRefresh } from './../ui_refresh'
 
 import {
 	Wand,
@@ -117,6 +118,10 @@ export default {
 		portrait_view: Boolean
 	},
 	computed: {
+		// Bumped on undo/redo/preset/particle-switch so molang editors re-mount with fresh values.
+		uiTick() {
+			return UiRefresh.tick;
+		},
 		input_groups() {
 			let input_groups = {};
 			if (this.tab_key == 'setup') return input_groups;

@@ -157,6 +157,13 @@ const ProjectStore = {
 	},
 
 	// Panel actions — ask the host to open a folder / .snow / create a particle.
+	saveOne(id) {
+		if (!vscode) return;
+		this.captureActiveEdit();
+		let p = state.particles.find(x => x.id === id);
+		if (!p || !p.path) return;
+		vscode.postMessage({ type: 'project_save', mode: 'folder', items: [{ id: p.id, path: p.path, content: p.buffer }] });
+	},
 	openFolder() { if (vscode) vscode.postMessage({ type: 'project_action', action: 'open_folder' }); },
 	openSnow() { if (vscode) vscode.postMessage({ type: 'project_action', action: 'open_snow' }); },
 	newParticle() { if (vscode) vscode.postMessage({ type: 'project_action', action: 'new' }); },

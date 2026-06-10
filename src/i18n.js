@@ -32,7 +32,9 @@ const STRINGS = {
 		'preview.play': 'Play', 'preview.pause': 'Pause', 'preview.collisions': 'Preview Collisions',
 		'preview.path': 'Preview particle path (full lifetime)',
 		'preview.rotation': 'Preview particle rotation along path',
+		'preview.texpath': 'Preview texture along the path',
 		'preview.shape': 'Show spawn-shape outline', 'preview.time': 'Time of day',
+		'preview.pathedit': 'Edit path in 3D (drag points; double-click to add, right-click to remove, [ ] for thickness)',
 		'preview.variables': 'Show Variable Placeholder Bar',
 
 		'time.default': 'Default', 'time.day': 'Day', 'time.sunset': 'Sunset', 'time.night': 'Night', 'time.cave': 'Cave',
@@ -57,7 +59,9 @@ const STRINGS = {
 		'preview.play': 'Воспроизвести', 'preview.pause': 'Пауза', 'preview.collisions': 'Показать столкновения',
 		'preview.path': 'Показать путь частицы (вся жизнь)',
 		'preview.rotation': 'Показать вращение частицы вдоль пути',
+		'preview.texpath': 'Показать текстуру вдоль пути',
 		'preview.shape': 'Показать контур формы спавна', 'preview.time': 'Время суток',
+		'preview.pathedit': 'Редактировать путь в 3D (тяните точки; двойной клик — добавить, правый клик — удалить, [ ] — толщина)',
 		'preview.variables': 'Показать панель переменных',
 
 		'time.default': 'По умолчанию', 'time.day': 'День', 'time.sunset': 'Закат', 'time.night': 'Ночь', 'time.cave': 'Пещера',
@@ -82,7 +86,9 @@ const STRINGS = {
 		'preview.play': 'Lecture', 'preview.pause': 'Pause', 'preview.collisions': 'Aperçu des collisions',
 		'preview.path': 'Aperçu de la trajectoire (durée de vie complète)',
 		'preview.rotation': 'Aperçu de la rotation le long de la trajectoire',
+		'preview.texpath': 'Aperçu de la texture le long de la trajectoire',
 		'preview.shape': 'Afficher le contour de la forme', 'preview.time': 'Heure du jour',
+		'preview.pathedit': 'Modifier la trajectoire en 3D (glissez les points ; double-clic pour ajouter, clic droit pour retirer, [ ] pour l\'épaisseur)',
 		'preview.variables': 'Afficher la barre des variables',
 
 		'time.default': 'Défaut', 'time.day': 'Jour', 'time.sunset': 'Coucher', 'time.night': 'Nuit', 'time.cave': 'Grotte',
@@ -107,7 +113,9 @@ const STRINGS = {
 		'preview.play': '再生', 'preview.pause': '一時停止', 'preview.collisions': '衝突をプレビュー',
 		'preview.path': 'パーティクルの軌道をプレビュー（全寿命）',
 		'preview.rotation': '軌道に沿った回転をプレビュー',
+		'preview.texpath': '軌道に沿ってテクスチャをプレビュー',
 		'preview.shape': 'スポーン形状の輪郭を表示', 'preview.time': '時刻',
+		'preview.pathedit': '3Dで軌道を編集（点をドラッグ、ダブルクリックで追加、右クリックで削除、[ ] で太さ）',
 		'preview.variables': '変数バーを表示',
 
 		'time.default': '既定', 'time.day': '昼', 'time.sunset': '夕暮れ', 'time.night': '夜', 'time.cave': '洞窟',

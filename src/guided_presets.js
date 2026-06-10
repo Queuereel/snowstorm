@@ -8,6 +8,7 @@
  */
 import { Data } from './input_structure';
 import registerEdit from './edits';
+import { bumpRefresh } from './ui_refresh';
 
 function inputAt(path) {
 	let parts = path.split('.');
@@ -23,6 +24,7 @@ export function applyValues(map) {
 		try { input.set(map[path]); } catch (e) { console.warn('preset set failed', path, e); }
 	}
 	registerEdit('apply preset');
+	bumpRefresh(); // remount molang editors so the preset's new values are shown
 	if (window.Emitter) window.Emitter.start();
 }
 

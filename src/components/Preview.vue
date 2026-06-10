@@ -2,7 +2,9 @@
     <main id="preview" class="preview">
         <div id="canvas_wrapper">
             <div id="overlay_timestamp">{{ timestamp }}</div>
-            <canvas id="canvas" @click="blur()" ref="canvas"></canvas>
+            <canvas id="canvas" @click="blur()" ref="canvas"
+                @pointerdown="onCanvasPointerDown" @pointermove="onCanvasHover"
+                @dblclick="onCanvasDblClick" @contextmenu="onCanvasContextMenu"></canvas>
             <div class="placeholder_bar" v-if="show_placeholder_bar">
                 <ul>
                     <li v-for="(key) in placeholder_keys" :key="key">
@@ -51,8 +53,14 @@
             <div class="tool" :class="{toggle_enabled: show_rotation}" @click="toggleTrajectoryRotation()" :title="$t('preview.rotation')">
                 <RotateCw :size="20" />
             </div>
+            <div class="tool" :class="{toggle_enabled: show_texture_path}" @click="toggleTrajectoryTexture()" :title="$t('preview.texpath')">
+                <ImageIcon :size="20" />
+            </div>
             <div class="tool" :class="{toggle_enabled: show_shape}" @click="toggleShapeGizmo()" :title="$t('preview.shape')">
                 <Box :size="20" />
+            </div>
+            <div class="tool" :class="{toggle_enabled: path_edit_mode}" @click="togglePathEdit()" :title="$t('preview.pathedit')">
+                <Hand :size="20" />
             </div>
 
             <div class="spacing" />
@@ -93,6 +101,7 @@
     import {Emitter, Scene, initParticles} from './../emitter';
     import {Trajectory} from './../trajectory';
     import {ShapeGizmo} from './../shape_gizmo';
+    import {PathEditor} from './../path_editor';
     import {validate} from './WarningDialog'
 
     import {OptionValues} from './../options'
@@ -109,7 +118,9 @@
         CheckCheck,
         Spline,
         RotateCw,
-        Box
+        Box,
+        Image as ImageIcon,
+        Hand
     } from 'lucide-vue'
 
     import {EditListeners} from '../edits'
@@ -346,7 +357,9 @@
             show_placeholder_bar: localStorage.getItem('snowstorm_show_placeholder_bar') == 'true',
             show_path: false,
             show_rotation: false,
+            show_texture_path: false,
             show_shape: false,
+            path_edit_mode: false,
             time_of_day: localStorage.getItem('snowstorm_time_of_day') || 'default',
             playhead: 0,
             bake_placeholder_key: null
@@ -362,8 +375,72 @@
             Spline,
             RotateCw,
             Box,
+            ImageIcon,
+            Hand,
         },
         methods: {
+            togglePathEdit() {
+                this.path_edit_mode = !this.path_edit_mode;
+                PathEditor.setActive(this.path_edit_mode);
+            },
+            pointerToNDC(event) {
+                let rect = View.canvas.getBoundingClientRect();
+                return new THREE.Vector2(
+                    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((event.clientY - rect.top) / rect.height) * 2 + 1
+                );
+            },
+            raycastHandles(event) {
+                this._raycaster.setFromCamera(this.pointerToNDC(event), View.camera);
+                return this._raycaster.intersectObjects(PathEditor.handleMeshes, false);
+            },
+            onCanvasPointerDown(event) {
+                if (!this.path_edit_mode || event.button !== 0) return;
+                let hits = this.raycastHandles(event);
+                if (!hits.length) return; // missed a handle → let OrbitControls orbit
+                this._dragIndex = hits[0].object.userData.pathHandle;
+                let handleWorld = new THREE.Vector3();
+                PathEditor.handles[this._dragIndex].getWorldPosition(handleWorld);
+                let normal = new THREE.Vector3();
+                View.camera.getWorldDirection(normal);
+                this._dragPlane.setFromNormalAndCoplanarPoint(normal, handleWorld);
+                View.controls.enabled = false;
+                event.preventDefault();
+                document.addEventListener('pointermove', this._boundPathMove);
+                document.addEventListener('pointerup', this._boundPathUp);
+            },
+            handlePathMove(event) {
+                if (this._dragIndex < 0) return;
+                this._raycaster.setFromCamera(this.pointerToNDC(event), View.camera);
+                let hit = new THREE.Vector3();
+                if (this._raycaster.ray.intersectPlane(this._dragPlane, hit)) {
+                    let space = PathEditor.space;
+                    let local = space ? space.worldToLocal(hit.clone()) : hit;
+                    PathEditor.dragTo(this._dragIndex, local);
+                }
+            },
+            handlePathUp() {
+                if (this._dragIndex >= 0) PathEditor.endDrag();
+                this._dragIndex = -1;
+                View.controls.enabled = true;
+                document.removeEventListener('pointermove', this._boundPathMove);
+                document.removeEventListener('pointerup', this._boundPathUp);
+            },
+            onCanvasHover(event) {
+                if (!this.path_edit_mode || this._dragIndex >= 0) return;
+                let hits = this.raycastHandles(event);
+                PathEditor.setHovered(hits.length ? hits[0].object.userData.pathHandle : -1);
+            },
+            onCanvasDblClick(event) {
+                if (!this.path_edit_mode) return;
+                let hits = this.raycastHandles(event);
+                if (hits.length) PathEditor.addPointAfter(hits[0].object.userData.pathHandle);
+            },
+            onCanvasContextMenu(event) {
+                if (!this.path_edit_mode) return;
+                let hits = this.raycastHandles(event);
+                if (hits.length) { event.preventDefault(); PathEditor.removePoint(hits[0].object.userData.pathHandle); }
+            },
             updateSize() {
                 resizeCanvas()
             },
@@ -412,6 +489,10 @@
             toggleTrajectoryRotation() {
                 this.show_rotation = !this.show_rotation;
                 Trajectory.setShowRotation(this.show_rotation);
+            },
+            toggleTrajectoryTexture() {
+                this.show_texture_path = !this.show_texture_path;
+                Trajectory.setShowTexture(this.show_texture_path);
             },
             toggleShapeGizmo() {
                 this.show_shape = !this.show_shape;
@@ -498,6 +579,21 @@
             EditListeners['shape_gizmo'] = () => {
                 if (ShapeGizmo.active) ShapeGizmo.update();
             };
+            // ---- 3D path editor wiring ----
+            PathEditor.setEmitter(Emitter);
+            this._raycaster = new THREE.Raycaster();
+            this._raycaster.params.Line = { threshold: 0.2 };
+            this._dragIndex = -1;
+            this._dragPlane = new THREE.Plane();
+            this._boundPathMove = this.handlePathMove.bind(this);
+            this._boundPathUp = this.handlePathUp.bind(this);
+            // [ and ] adjust the thickness of the hovered control point while in path-edit mode.
+            this._pathKeydown = (e) => {
+                if (!this.path_edit_mode || PathEditor.hovered < 0) return;
+                if (e.key === ']') PathEditor.adjustThickness(PathEditor.hovered, 0.1);
+                else if (e.key === '[') PathEditor.adjustThickness(PathEditor.hovered, -0.1);
+            };
+            window.addEventListener('keydown', this._pathKeydown);
             // Keep the timeline playhead in sync with playback.
             setInterval(() => {
                 let span = Emitter.active_time || (Emitter.config && Emitter.config.emitter_lifetime_active_time) || 1;
@@ -508,6 +604,11 @@
             View.updateVariablePlaceholderList = () => {
                 updateVariablePlaceholderList(this.placeholder_keys);
             }
+        },
+        beforeDestroy() {
+            if (this._pathKeydown) window.removeEventListener('keydown', this._pathKeydown);
+            if (this._boundPathMove) document.removeEventListener('pointermove', this._boundPathMove);
+            if (this._boundPathUp) document.removeEventListener('pointerup', this._boundPathUp);
         }
     }
     export {View}
