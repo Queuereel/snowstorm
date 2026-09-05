@@ -4,9 +4,12 @@ REM  Snowstorm Desktop - build a standalone Windows installer.
 REM  Produces a Snowstorm setup .exe in the "dist_app" folder
 REM  that you can install like any normal program (or share).
 REM ============================================================
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
 title Snowstorm Desktop - Make Installer
+
+set "ELECTRON_RUN_AS_NODE="
+set "ELECTRON_SKIP_BINARY_DOWNLOAD="
 
 where node >nul 2>nul
 if errorlevel 1 (
@@ -20,8 +23,16 @@ if errorlevel 1 (
 if not exist "node_modules\" (
     echo First-time setup: installing dependencies...
     echo.
-    call npm install
+    call npm install --foreground-scripts --no-audit --no-fund --fetch-retries=5
     if errorlevel 1 goto :error
+)
+
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo The Electron runtime is missing - packaging needs it.
+    echo Run "Snowstorm-Start.bat" once first, then come back.
+    echo.
+    pause
+    exit /b 1
 )
 
 echo Building the standalone installer. This can take a few minutes...
