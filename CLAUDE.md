@@ -61,6 +61,20 @@ Protocol summary (renderer ⇄ host), see `src/CLAUDE.md` for the full table.
    headless as plain Node (no window; `require('electron')` returns a path string).
    `desktop/launch.js` strips it for the child — always launch via the npm scripts / .bat files,
    never `electron desktop/main.js` directly.
+3. **`npm install` needs `allow-git` on newer npm.** The `root` dependency
+   (`github:JannisX11/vue-prism-editor#<sha>`) is fetched via git, which npm 11+ blocks by default
+   (`EALLOWGIT`) as a supply-chain-safety default. The repo's `.npmrc` sets `allow-git=all` so a
+   plain `npm install` just works — don't remove it.
+4. **Electron's postinstall (binary download) needs an explicit approval on newer npm.** Same
+   hardening family as #3: dependency install scripts are skipped unless listed in package.json's
+   `allowScripts` (managed via `npm install-scripts approve electron`, already committed there) —
+   without it `node_modules/electron/dist/electron` never gets downloaded and every launch silently
+   no-ops.
+5. **`yargs@17.7.2` (a `webpack-cli` dependency) mis-declares `"type": "module"`** even though
+   `node_modules/yargs/yargs` is plain CommonJS; recent Node enforces that field strictly, so the
+   build fails with `ReferenceError: require is not defined in ES module scope`.
+   `desktop/patch-yargs.js` fixes the field post-install and is chained into `npm run postinstall`,
+   so a fresh `npm install` self-heals — no manual step needed.
 
 ## License
 
