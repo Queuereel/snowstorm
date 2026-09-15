@@ -24,7 +24,8 @@
 		"build": "node desktop/prep-images.js && npm run production",
 		"desktop": "npm run build && node desktop/launch.js",
 		"desktop-nobuild": "node desktop/launch.js",
-		"dist-win": "npm run build && electron-builder --win"
+		"dist-win": "npm run build && electron-builder --win",
+		"dist-linux": "npm run build && electron-builder --linux"
 	},
 	"build": {
 		"appId": "net.blockbench.snowstorm.desktop",
@@ -45,6 +46,12 @@
 		"win": {
 			"target": "nsis",
 			"icon": "icon.png"
+		},
+		"linux": {
+			"target": ["AppImage"],
+			"icon": "icon.png",
+			"category": "Graphics",
+			"executableName": "snowstorm"
 		}
 	},
 	"devDependencies": {

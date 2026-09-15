@@ -9,15 +9,20 @@ npm package. Bundled by **Laravel Mix** (webpack) into `dist/app.js`, which `ind
 
 ## Run / build (no command line needed)
 
-Double-click one of the root `.bat` files (see `READ ME FIRST.txt`):
-- `Snowstorm-Start.bat` — install (first time) → build → launch.
-- `Snowstorm-Run.bat` — launch without rebuilding.
+Double-click (or `./` on Linux) one of the root launcher scripts (see `READ ME FIRST.txt`):
+- `Snowstorm-Start.bat` / `Snowstorm-Start.sh` — install (first time) → build → launch.
+- `Snowstorm-Run.bat` / `Snowstorm-Run.sh` — launch without rebuilding.
 - `Snowstorm-MakeInstaller.bat` — produce a Windows installer in `dist_app/`.
+- `Snowstorm-MakeInstaller.sh` — build a Linux **AppImage** in `dist_app/`, then install it: copies
+  it to `~/.local/share/Snowstorm/Snowstorm.AppImage`, installs the icon, and writes an app-menu
+  entry + a desktop-icon launcher (there's no separate "installer program" step on Linux — running
+  the script *is* the install). Safe to re-run to update an existing install.
 
 Equivalent npm scripts:
 - `npm run build` — `node desktop/prep-images.js && mix --production` → `dist/app.js`.
 - `npm run desktop` / `npm run desktop-nobuild` — build+launch / launch only.
-- `npm run dist-win` — package via electron-builder.
+- `npm run dist-win` — package a Windows installer via electron-builder.
+- `npm run dist-linux` — package a Linux AppImage via electron-builder.
 - `npm run watch` — Mix watch mode for web/extension development.
 
 ## The one architectural idea to know
@@ -41,7 +46,9 @@ Protocol summary (renderer ⇄ host), see `src/CLAUDE.md` for the full table.
   full-lifetime path and rotation in the 3D viewport without waiting out the emitter.
 - Live "expected texture location" hint under the texture-path field
   (`src/components/Sidebar/InputGroup.vue`) + a `reload_texture` handler in `src/texture_edit.js`.
-- Root `.bat` launchers + `READ ME FIRST.txt`.
+- Root `.bat` / `.sh` launchers + `READ ME FIRST.txt`.
+- Linux packaging: `build.linux` target (AppImage) in `package.json` + `Snowstorm-MakeInstaller.sh`
+  (build + desktop integration, since AppImages have no OS-level installer of their own).
 
 ## Build gotchas (important)
 
